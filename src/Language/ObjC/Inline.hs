@@ -12,6 +12,9 @@ import Language.ObjC.Inline.Prim
 
 import           Control.Lens                        (iforM_)
 import           Control.Monad                       (forM)
+import           Data.ByteString                     (ByteString)
+import           Data.ByteString                     (packCStringLen)
+import           Data.ByteString                     (useAsCStringLen)
 import qualified Data.ByteString                     as BS
 import qualified Data.ByteString.Unsafe              as BS
 import qualified Data.Map                            as M
@@ -56,12 +59,14 @@ objcDefTable =
   [defClass "NSString"
   ,defClass "NSObject"
   ,defClass "NSArray"
+  ,defClass "NSData"
   ,defClass "NSMutableArray"]
 
 
 C.context (C.baseCtx <> objcPrimCtx [(C.TypeName "NSString", [t|ObjC "NSString"|])
   ,(C.TypeName "NSObject", [t|ObjC "NSObject"|])
   ,(C.TypeName "NSArray",  [t|ObjC "NSArray"|])
+  ,(C.TypeName "NSData", [t|ObjC "NSData"|])
   ,(C.TypeName "NSMutableArray", [t|ObjC "NSMutableArray"|])])
 import_ "<Foundation/Foundation.h>"
 
@@ -86,6 +91,16 @@ toObjC pxy a = ObjC <$> toObjC_ pxy a
 
 toObjC' :: forall a. Object a => Haskell a -> IO (ObjC a)
 toObjC' = toObjC (Proxy :: Proxy a)
+
+instance Object "NSData" where
+  type Haskell "NSData" = ByteString
+  fromObjC_ ptr = do
+    len   <- [C.exp| NSUInteger { [($(NSData *ptr)) length] } |]
+    bytes <- [C.exp| const char * { (const char *)[($(NSData *ptr)) bytes] } |]
+    packCStringLen (bytes, fromIntegral len)
+  toObjC_ _ txt = useAsCStringLen txt $ \ (bytes, fromIntegral -> len) ->
+    [C.exp| NSData * { [NSData dataWithBytesNoCopy: $(char * bytes)
+                                            length: $(int len)] } |]
 
 instance Object "NSString" where
   type Haskell "NSString" = Text
