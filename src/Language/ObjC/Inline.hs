@@ -1,13 +1,19 @@
-{-# LANGUAGE DataKinds, EmptyDataDecls, FlexibleContexts, FlexibleInstances  #-}
-{-# LANGUAGE ForeignFunctionInterface, GADTs, GeneralizedNewtypeDeriving     #-}
-{-# LANGUAGE KindSignatures, MultiParamTypeClasses, OverloadedStrings        #-}
-{-# LANGUAGE PolyKinds, QuasiQuotes, ScopedTypeVariables, TemplateHaskell    #-}
-{-# LANGUAGE TypeFamilies, TypeOperators, UndecidableInstances, ViewPatterns #-}
+{-# LANGUAGE DataKinds, EmptyDataDecls, FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE ForeignFunctionInterface, GADTs, GeneralizedNewtypeDeriving    #-}
+{-# LANGUAGE KindSignatures, LambdaCase, MultiParamTypeClasses              #-}
+{-# LANGUAGE OverloadedStrings, PolyKinds, QuasiQuotes, RecordWildCards     #-}
+{-# LANGUAGE ScopedTypeVariables, TemplateHaskell, TypeFamilies             #-}
+{-# LANGUAGE TypeOperators, UndecidableInstances, ViewPatterns              #-}
 module Language.ObjC.Inline (objcCtx, objcCtxWithClasses, import_, ObjC(..), attain, (:>),
-                             upcast, NSString, fromNSString, safeCastObjC,
+                             upcast, NSString, fromNSString, safeCastObjC, exp,
                              fromNSArray, fromNSArray', toNSArray, toNSArray',
                              Class(..), Object(..), fromObjC, toObjC, toObjC',
-                             NSArray, NSArray', NSData, description, defClass, defStruct) where
+                             NSArray, NSArray', NSData, description, defClass, defStruct,
+                             -- * Re-export
+                             C.context,
+                             -- * Redefined quotes
+                             exp, block, pure, exp', block', pure'
+                            ) where
 import Language.ObjC.Inline.Prim
 
 import           Control.Lens                        (iforM_)
@@ -33,18 +39,25 @@ import           GHC.TypeLits                        (KnownSymbol, Symbol)
 import           GHC.TypeLits                        (symbolVal)
 import qualified Language.C.Inline                   as C
 import           Language.C.Inline.Context           (AntiQuoter (..))
-import           Language.C.Inline.Context           (Context (..), Purity)
+import           Language.C.Inline.Context           (Context (..))
+import           Language.C.Inline.Context           (Purity (IO, Pure))
 import           Language.C.Inline.Context           (SomeAntiQuoter (..))
 import           Language.C.Inline.Context           (TypesTable, convertType)
 import           Language.C.Inline.HaskellIdentifier (HaskellIdentifier)
 import           Language.C.Inline.HaskellIdentifier (mangleHaskellIdentifier)
 import           Language.C.Inline.HaskellIdentifier (unHaskellIdentifier)
+import qualified Language.C.Inline.Internal          as P
 import qualified Language.C.Types                    as C
 import qualified Language.C.Types                    as T
 import           Language.Haskell.TH                 (Type (AppT, ConT), TypeQ)
 import           Language.Haskell.TH                 (litT, pprint, strTyLit)
 import           Language.Haskell.TH                 (stringL)
+import           Language.Haskell.TH                 (runIO)
+import           Language.Haskell.TH                 (ppr)
 import qualified Language.Haskell.TH                 as TH
+import           Language.Haskell.TH.Quote           (QuasiQuoter (..))
+import           Prelude                             hiding (exp, pure)
+import           System.IO.Unsafe                    (unsafePerformIO)
 import qualified Text.Parser.Token                   as Parser
 
 newtype ObjC (a :: k) = ObjC { runObjC :: Ptr (ObjC a) }
@@ -82,6 +95,39 @@ class Class a => Object a where
   type Haskell a :: *
   fromObjC_ ::  Ptr (ObjC a) -> IO (Haskell a)
   toObjC_   ::  proxy a -> Haskell a -> IO (Ptr (ObjC a))
+
+myGenercQuote :: Bool           -- ^ to demarshal or not
+              -> Purity         -- ^ purity
+              -> (TypeQ -> T.Type T.CIdentifier
+                        -> [(T.CIdentifier, T.Type T.CIdentifier)]
+                        -> String
+                        -> TH.Q TH.Exp)
+              -> QuasiQuoter
+myGenercQuote demarshal purity build =
+  P.genericQuote purity $ \typeQ cType cxt src -> do
+  ctx <- P.getContext
+  let viewer tpq = tpq >>= \case
+        AppT (ConT obc) _ | obc == ''ObjC -> return True
+        _ -> return False
+  needsObjC <- case cType of
+    C.Ptr _ (C.TypeSpecifier _ spec) -> maybe (return False) viewer $ M.lookup spec (ctxTypesTable ctx)
+    _ -> return False
+  ans <- build typeQ cType cxt src
+  let demarsh | demarshal = [| (fromObjC . ObjC =<<) |]
+              | otherwise = [| fmap ObjC |]
+  if needsObjC then [|$demarsh $(return ans)|] else return ans
+
+-- | ObjC suited qqs.
+exp, block, pure :: QuasiQuoter
+exp = myGenercQuote False IO $ P.inlineExp TH.Safe
+block = myGenercQuote False IO $ P.inlineItems TH.Safe
+pure = myGenercQuote False Pure $ P.inlineExp TH.Safe
+
+-- | ObjC suited qqs with demarshalling.
+exp', block', pure' :: QuasiQuoter
+exp' = myGenercQuote True IO $ P.inlineExp TH.Safe
+block' = myGenercQuote True IO $ P.inlineItems TH.Safe
+pure' = myGenercQuote True Pure $ P.inlineExp TH.Safe
 
 fromObjC :: Object a => ObjC a -> IO (Haskell a)
 fromObjC (ObjC ptr) = fromObjC_ ptr

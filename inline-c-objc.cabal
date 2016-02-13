@@ -49,7 +49,6 @@ executable hello
   cc-options:          -Wall -fobjc-arc 
   ghc-options:         -Wall -fllvm -optl-ObjC -threaded
   build-depends:       base
-                     , inline-c
                      , text
                      , inline-c-objc
   default-language:    Haskell2010
