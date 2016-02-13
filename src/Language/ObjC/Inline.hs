@@ -7,7 +7,7 @@ module Language.ObjC.Inline (objcCtx, objcCtxWithClasses, import_, ObjC(..), att
                              upcast, NSString, fromNSString, safeCastObjC,
                              fromNSArray, fromNSArray', toNSArray, toNSArray',
                              Class(..), Object(..), fromObjC, toObjC, toObjC',
-                             NSArray, NSArray', description, defClass, defStruct) where
+                             NSArray, NSArray', NSData, description, defClass, defStruct) where
 import Language.ObjC.Inline.Prim
 
 import           Control.Lens                        (iforM_)
@@ -123,6 +123,7 @@ upcast :: (a :> b) => ObjC b -> ObjC a
 upcast (ObjC a) =  ObjC $ castPtr a
 
 type NSString = ObjC "NSString"
+type NSData = ObjC "NSData"
 
 objcCtxWithClasses :: [(C.TypeSpecifier, TypeQ)] -> Context
 objcCtxWithClasses cls = mempty { ctxAntiQuoters = M.fromList [("txt", SomeAntiQuoter txtAntiQuoter)
