@@ -162,6 +162,7 @@ data NSMutableArrayEl a
 instance "NSObject" :> (b :: k)
 instance NSMutableArrayEl a :> NSMutableArrayEl a
 instance (a :> b) => NSArrayEl a :> NSArrayEl b
+instance "NSDictionary" :> "NSMutableDictionary"
 
 type NSArray' a = ObjC (NSArrayEl a)
 type NSMutableArray' a = ObjC (NSMutableArrayEl a)
