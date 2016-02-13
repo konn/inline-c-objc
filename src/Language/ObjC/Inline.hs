@@ -116,7 +116,7 @@ myGenercQuote demarshal purity build =
   ans <- build typeQ cType args src
   vars <- mapM (const (TH.newName "arg")) args
   let demarsh | demarshal = [| fromObjC . ObjC |]
-              | otherwise = [| fmap ObjC  |]
+              | otherwise = [| return . ObjC  |]
       demarshalled = TH.lamE (map TH.varP vars) $
                      [| $demarsh =<< $(TH.appsE (return ans : map TH.varE vars))|]
   if needsObjC then demarshalled else return ans
