@@ -18,6 +18,7 @@ import Language.ObjC.Inline.Prim
 
 import           Control.Lens                        (iforM_)
 import           Control.Monad                       (forM)
+import           Control.Monad                       ((<=<))
 import           Data.ByteString                     (ByteString)
 import           Data.ByteString                     (packCStringLen)
 import           Data.ByteString                     (useAsCStringLen)
@@ -104,7 +105,7 @@ myGenercQuote :: Bool           -- ^ to demarshal or not
                         -> TH.Q TH.Exp)
               -> QuasiQuoter
 myGenercQuote demarshal purity build =
-  P.genericQuote purity $ \typeQ cType cxt src -> do
+  P.genericQuote purity $ \typeQ cType args src -> do
   ctx <- P.getContext
   let viewer tpq = tpq >>= \case
         AppT (ConT obc) _ | obc == ''ObjC -> return True
@@ -112,10 +113,13 @@ myGenercQuote demarshal purity build =
   needsObjC <- case cType of
     C.Ptr _ (C.TypeSpecifier _ spec) -> maybe (return False) viewer $ M.lookup spec (ctxTypesTable ctx)
     _ -> return False
-  ans <- build typeQ cType cxt src
-  let demarsh | demarshal = [| (fromObjC . ObjC =<<) |]
-              | otherwise = [| fmap ObjC |]
-  if needsObjC then [|$demarsh $(return ans)|] else return ans
+  ans <- build typeQ cType args src
+  vars <- mapM (const (TH.newName "arg")) args
+  let demarsh | demarshal = [| fromObjC . ObjC |]
+              | otherwise = [| fmap ObjC  |]
+      demarshalled = TH.lamE (map TH.varP vars) $
+                     [| $demarsh =<< $(TH.appsE (return ans : map TH.varE vars))|]
+  if needsObjC then demarshalled else return ans
 
 -- | ObjC suited qqs.
 exp, block, pure :: QuasiQuoter
