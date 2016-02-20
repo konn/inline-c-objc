@@ -10,7 +10,7 @@ module Language.ObjC.Inline (objcCtx, objcCtxWithClasses, import_, ObjC(..), att
                              Class(..), Object(..), fromObjC, toObjC, toObjC',
                              NSArray, NSArray', NSData, description, defClass, defStruct,
                              -- * Re-export
-                             C.context,
+                             C.context, C.verbatim,
                              -- * Redefined quotes
                              exp, block, pure, exp', block', pure'
                             ) where
