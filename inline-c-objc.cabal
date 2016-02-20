@@ -47,9 +47,9 @@ library
 
 executable hello
   if flag(examples)
-     buildable: true
+     buildable:        True
   else
-     buildable: false
+     buildable:        False
   hs-source-dirs:      examples
   Main-is:             hello.hs
   c-sources:           examples/hello.m
