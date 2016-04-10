@@ -187,7 +187,8 @@ objcCtx :: Context
 objcCtx = objcCtxWithClasses []
 
 mkNSString :: Text -> IO NSString
-mkNSString txt = ObjC <$> T.withCStringLen txt (\ (cstr, _len) ->
+mkNSString txt | T.null txt = ObjC <$> [C.exp| NSString * { @"" } |]
+               | otherwise = ObjC <$> T.withCStringLen txt (\ (cstr, _len) ->
   [C.exp| NSString * { [NSString stringWithCString: $(char *cstr) encoding:NSUTF8StringEncoding] } |])
 
 attain :: Ptr () -> IO (ObjC s)
