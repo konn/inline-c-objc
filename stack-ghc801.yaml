@@ -8,7 +8,3 @@ extra-deps: []
 
 flags: {}
 extra-package-dbs: []
-extra-lib-dirs:
-- /usr/local/Cellar/llvm37/3.7.1/lib
-extra-include-dirs:
-- /usr/local/Cellar/llvm37/3.7.1/include
