@@ -29,14 +29,13 @@ library
                      , conduit-extra
                      , containers >= 0.5.6.2
                      , inline-c
-                     , c-storable-deriving
                      , data-default
                      , lens
                      , template-haskell >= 2.10.0.0
                      , text
                      , parsers
-  cc-options:          -Wall -fobjc-arc 
-  ghc-options:         -Wall -fllvm -optl-ObjC -threaded
+  cc-options:          -Wall -fobjc-arc
+  ghc-options:         -Wall -fllvm -optl-ObjC
   frameworks:          Foundation, AppKit
   default-extensions:  QuasiQuotes
                        GADTs

@@ -1,0 +1,14 @@
+resolver: lts-7.7
+
+# Local packages, usually specified by relative directory name
+packages:
+- '.'
+
+extra-deps: []
+
+flags: {}
+extra-package-dbs: []
+extra-lib-dirs:
+- /usr/local/Cellar/llvm37/3.7.1/lib
+extra-include-dirs:
+- /usr/local/Cellar/llvm37/3.7.1/include
