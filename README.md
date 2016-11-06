@@ -1,8 +1,9 @@
 `inline-c-objc` - Inline Obj-C Interface for Haskell build on top of `inline-c`
---------------------------------------------------------------------------------
+================================================================================
+
 
 INSTALL
-=======
+-------
 First, you might need install LLVM 3.7 by Homebrew or something:
 
 ```sh
